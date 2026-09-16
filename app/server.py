@@ -43,6 +43,11 @@ def api_pump(pump_id):
     })
 
 
+@app.route("/api/pump/<pump_id>/health-history")
+def api_health_history(pump_id):
+    return jsonify(data_tools.get_health_history(pump_id))
+
+
 @app.route("/api/chat", methods=["POST"])
 def api_chat():
     data = request.json

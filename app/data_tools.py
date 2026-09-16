@@ -88,6 +88,8 @@ def get_fleet_overview(snapshot_ts: str = "") -> list[dict]:
                 "cost_usd": float(row["repair_cost_usd"]),
             }
 
+        repair_req = _get_repair_requirements(pump)
+
         results.append({
             "pump_id": pid,
             "model": pump["model"],
@@ -107,6 +109,7 @@ def get_fleet_overview(snapshot_ts: str = "") -> list[dict]:
             "seal_leak": bool(latest["seal_leak_detected"]),
             "last_failure": last_failure,
             "last_maintenance": pump["last_maintenance_date"],
+            "repair_requirements": repair_req,
         })
     return results
 
@@ -312,6 +315,32 @@ def get_operating_schedule(pump_id: str) -> list[dict]:
     return result
 
 
+def get_health_history(pump_id: str) -> list[dict]:
+    """Get daily health scores over the full dataset period for a pump."""
+    _load()
+    readings = _sensor_df[_sensor_df["pump_id"] == pump_id]
+    if readings.empty:
+        return []
+
+    pump_meta = _pump_metadata_df[_pump_metadata_df["pump_id"] == pump_id].iloc[0]
+    envelope = json.loads(pump_meta["operating_envelope_json"])
+
+    readings = readings.set_index("timestamp").sort_index()
+    daily = readings.resample("D").last().dropna(subset=["bearing_temp_c"])
+
+    history = []
+    for ts, row in daily.iterrows():
+        day_data = readings.loc[:ts].tail(24)
+        health = _compute_health(row, envelope, pump_id, day_data)
+        history.append({
+            "date": ts.strftime("%Y-%m-%d"),
+            "score": health["score"],
+            "status": health["status"],
+            "flags": len(health["flags"]),
+        })
+    return history
+
+
 def get_oem_manual_section(model: str, search_term: str = "") -> dict:
     """Read OEM manual for a pump model. Optionally search for a specific section."""
     ref_dir = f"{DATA_DIR}/reference_docs"
@@ -362,6 +391,67 @@ def get_oem_manual_section(model: str, search_term: str = "") -> dict:
         "model": model,
         "content": content,
         "source": f"reference_docs/{filename}",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Repair requirements — derived from pump attributes
+# ---------------------------------------------------------------------------
+
+def _get_repair_requirements(pump_row) -> dict:
+    seal = str(pump_row["seal_type"])
+    bearing = str(pump_row["bearing_type"])
+    fluid = str(pump_row["service_fluid"]).lower()
+    power_kw = float(pump_row["rated_power_kw"])
+    criticality = int(pump_row["criticality_rating"])
+
+    skills = []
+    certifications = []
+    effort_hrs = 4
+
+    skills.append("Rotating equipment mechanic")
+    if "double" in seal.lower():
+        skills.append("Mechanical seal specialist")
+        certifications.append("Seal system certification")
+        effort_hrs += 4
+    else:
+        skills.append("Packing/seal technician")
+        effort_hrs += 2
+
+    if power_kw >= 37:
+        skills.append("Electrical technician (HV)")
+        certifications.append("High-voltage isolation permit")
+        effort_hrs += 2
+
+    if "crude" in fluid:
+        certifications.append("H2S safety certification")
+        certifications.append("Hot work permit")
+        effort_hrs += 2
+    elif "naphtha" in fluid or "kerosene" in fluid:
+        certifications.append("Flammable fluids handling")
+        effort_hrs += 1
+    elif "diesel" in fluid or "fuel oil" in fluid:
+        certifications.append("Flammable fluids handling")
+        effort_hrs += 1
+
+    skills.append("Vibration analyst (ISO 18436-2)")
+
+    if criticality == 1:
+        effort_level = "High"
+        effort_hrs = int(effort_hrs * 1.3)
+        certifications.append("Critical equipment sign-off")
+    elif criticality == 2:
+        effort_level = "Medium"
+    else:
+        effort_level = "Low"
+        effort_hrs = int(effort_hrs * 0.8)
+
+    return {
+        "skills_required": skills,
+        "certifications": certifications,
+        "effort_level": effort_level,
+        "estimated_repair_hrs": effort_hrs,
+        "crew_size": 3 if criticality == 1 else 2,
     }
 
 
