@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import os
 
-DATA_DIR = "/workshop/use-case-2-data/data"
+DATA_DIR = "/workshop/data"
 
 # ---------------------------------------------------------------------------
 # Load data once at import time — 60MB sensor CSV is fine in RAM for a demo
