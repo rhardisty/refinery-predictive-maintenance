@@ -4,8 +4,6 @@ import agent
 
 app = Flask(__name__)
 
-conversation_histories = {}
-
 
 @app.route("/")
 def index():
@@ -54,11 +52,7 @@ def api_chat():
     user_message = data.get("message", "")
     session_id = data.get("session_id", "default")
 
-    history = conversation_histories.get(session_id)
-
-    result = agent.chat(user_message, history)
-
-    conversation_histories[session_id] = result["conversation_history"]
+    result = agent.chat(user_message, session_id=session_id)
 
     return jsonify({
         "response": result["response"],
@@ -70,12 +64,12 @@ def api_chat():
 def api_chat_reset():
     data = request.json
     session_id = data.get("session_id", "default")
-    conversation_histories.pop(session_id, None)
+    agent.reset_session(session_id)
     return jsonify({"status": "ok"})
 
 
 if __name__ == "__main__":
     print("Loading data...")
     data_tools._load()
-    print("Data loaded. Starting server on port 3000...")
+    print("Data loaded. Starting Strands AgentCore server on port 3000...")
     app.run(host="0.0.0.0", port=3000, debug=False)
