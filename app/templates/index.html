@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDU Pump Health — Predictive Maintenance</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <h1>CDU Pump Fleet Monitor</h1>
+            <span class="subtitle">Predictive Maintenance Dashboard — Crude Distillation Unit</span>
+        </div>
+        <div class="header-right">
+            <div class="fleet-stats" id="fleet-stats"></div>
+            <div class="timestamp-display" id="timestamp-display"></div>
+        </div>
+    </header>
+
+    <div class="snapshot-bar" id="snapshot-bar">
+        <span class="snapshot-label">Time Travel:</span>
+        <div class="snapshot-buttons" id="snapshot-buttons"></div>
+    </div>
+
+    <main>
+        <section class="pump-grid" id="pump-grid">
+            <div class="loading">Loading fleet data...</div>
+        </section>
+
+        <section class="chat-panel">
+            <div class="chat-header">
+                <h2>AI Maintenance Advisor</h2>
+                <button class="btn-reset" onclick="resetChat()" title="New conversation">Reset</button>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message assistant">
+                    <div class="message-content">
+                        <p>I'm your predictive maintenance advisor for the CDU pump fleet. I have access to all sensor data, maintenance records, failure history, OEM manuals, and spare parts inventory.</p>
+                        <p><strong>Try asking:</strong></p>
+                        <ul>
+                            <li>"What happened with pump P-03?"</li>
+                            <li>"Which pumps are most at risk right now?"</li>
+                            <li>"Show me the failure history and total downtime costs"</li>
+                            <li>"What does the Sulzer manual say about cavitation?"</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Ask about any pump, failure mode, or maintenance question..."
+                       onkeydown="if(event.key==='Enter')sendMessage()">
+                <button onclick="sendMessage()" id="send-btn">Send</button>
+            </div>
+        </section>
+    </main>
+
+    <div class="pump-detail-overlay" id="pump-detail-overlay" onclick="if(event.target===this)closePumpDetail()">
+        <div class="pump-detail-card" id="pump-detail-card"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
